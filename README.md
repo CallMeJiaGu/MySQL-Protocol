@@ -23,39 +23,50 @@ public class QueryTest {
 
 }
 
- public void query(String host,int port ,String user,String password,String dataBase,String sqlStr) throws Exception{
+public class Query {
+    public void query(String host,int port ,String user,String password,String dataBase,String sqlStr) throws Exception{
         OKPacket okPacket = null;
         Socket socket = new Socket();
 
+        //三次握手建立连接
         threeHands(socket,host,port);
-        
+
+        //处理handshake
         InputStream inputStreams = socket.getInputStream();
         HandshakePacket handshakePacket = processHandShake(inputStreams);
 
+        //发送Auth Packet
         OutputStream outputStream = socket.getOutputStream();
         sendAuthPacket(handshakePacket,user,password,dataBase,outputStream);
-
+        //解析OK packet包
         okPacket = processOKPacket(inputStreams);
         if(okPacket.header!=0x00)
             throw new Exception("服务端对认证包验证后，返回的OK包中标志位不为0x00");
 
+        //发送query set names utf8的命令
         sendQueryPacket(outputStream,"SET NAMES utf8");
         okPacket = processOKPacket(inputStreams);
         if(okPacket.header!=0x00)
             throw new Exception("服务端对请求包执行后，返回的OK包中标志位不为0x00");
 
+        //发送SET autocommit=0的命令
         sendQueryPacket(outputStream,"SET autocommit=0");
+        //解析OK packet包
         okPacket = processOKPacket(inputStreams);
         if(okPacket.header!=0x00)
             throw new Exception("服务端对请求包执行后，返回的OK包中标志位不为0x00");
 
+        //发送 query packet包
         sendQueryPacket(outputStream,sqlStr);
 
+        //解析result
         processResult(inputStreams);
 
+        //解析完毕发送Quit包给服务端
         sendQuitPacket(socket,outputStream);
 
     }
+}
 ```
 结果：
 > 一种基于混沌的敏感数据加密算法,司德成,
